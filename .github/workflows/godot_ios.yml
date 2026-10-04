@@ -37,31 +37,22 @@ jobs:
           mkdir -p build
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/game.pck project.godot
 
-      # 3. بناء وتجهيز هيكل التطبيق IPA
+      # 3. استخراج الباينري وتجهيز التطبيق
       - name: Build Application Structure
         run: |
           mkdir -p build/Payload/TowerWars.app
           TEMPLATE_ZIP="$HOME/Library/Application Support/Godot/export_templates/4.3.stable/ios.zip"
           unzip -q "$TEMPLATE_ZIP" -d build/godot_template
           
-          # البحث عن الملف التنفيذي الخاص بـ iOS داخل القالب
-          EXECUTABLE=$(find build/godot_template -type f -name "godot_ios.release.arm64" -o -name "godot_ios.debug.arm64" | head -n 1)
-          if [ -z "$EXECUTABLE" ]; then
-            EXECUTABLE=$(find build/godot_template -type f -exec file {} + | grep "Mach-O 64-bit" | cut -d: -f1 | head -n 1)
-          fi
-
-          if [ -n "$EXECUTABLE" ]; then
-            cp "$EXECUTABLE" build/Payload/TowerWars.app/TowerWars
-            chmod +x build/Payload/TowerWars.app/TowerWars
-          else
-            echo "Error: Binary not found!"
-            exit 1
-          fi
+          # انسخ أحدث ملف تنفيذ متاح من القالب المنسوخ
+          cp build/godot_template/godot_ios.release.arm64 build/Payload/TowerWars.app/TowerWars || cp build/godot_template/godot_ios.debug.arm64 build/Payload/TowerWars.app/TowerWars || cp $(find build/godot_template -type f ! -name "*.plist" ! -name "*.nib" | head -n 1) build/Payload/TowerWars.app/TowerWars
           
-          # نسخ ملف اللعبة
+          chmod +x build/Payload/TowerWars.app/TowerWars
+          
+          # نسخ حزمة اللعبة
           cp build/game.pck build/Payload/TowerWars.app/
 
-          # إنشاء ملف Info.plist قياسي ومعتمد
+          # إنشاء ملف Info.plist
           cat << 'EOF' > build/Payload/TowerWars.app/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.plist">
@@ -104,7 +95,7 @@ jobs:
           </plist>
           EOF
 
-      # 4. تجميع ملف IPA
+      # 4. ضغط حزمة الـ IPA
       - name: Package Final IPA
         run: |
           cd build
