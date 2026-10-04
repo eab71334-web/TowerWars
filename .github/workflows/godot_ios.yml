@@ -55,11 +55,12 @@ jobs:
 
           [preset.0.options]
           architectures/arm64=true
-          application/identifier="com.towerwars.game"
-          application/name="TowerWars"
-          application/signature=""
+          application/bundle_identifier="com.towerwars.game"
+          application/signature="com.towerwars.game"
           application/short_version="1.0"
           application/version="1.0"
+          application/team_id="XYZ1234567"
+          application/app_store_team_id="XYZ1234567"
           capabilities/access_gyroscope=false
           capabilities/access_accelerometer=false
           capabilities/access_magnetometer=false
