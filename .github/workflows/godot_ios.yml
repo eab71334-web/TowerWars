@@ -13,12 +13,28 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Godot Engine & Export Templates
+      - name: Setup Godot Engine
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.2.2
           use-dotnet: false
-          download-templates: true
+
+      - name: Download and Extract iOS Template Archive
+        run: |
+          GODOT_VERSION="4.2.2.stable"
+          TARGET_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
+          mkdir -p "$TARGET_DIR"
+          
+          echo "Downloading Godot export templates TPZ..."
+          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          
+          echo "Extracting templates..."
+          unzip -q templates.tpz -d /tmp/godot_templates
+          cp /tmp/godot_templates/templates/* "$TARGET_DIR/"
+          rm -rf templates.tpz /tmp/godot_templates
+
+          echo "Verifying ios.zip presence:"
+          ls -la "$TARGET_DIR"
 
       - name: Create export_presets.cfg if missing
         run: |
