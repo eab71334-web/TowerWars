@@ -26,51 +26,59 @@ jobs:
           unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      # إسناد Team ID وهمي لتجاوز فحص Godot
-      - name: Patch export_presets.cfg with Dummy Team ID
+      # إنشاء ملف export_presets.cfg تلقائياً لضمان وجود الإعداد الصحيح
+      - name: Generate Preset File
         run: |
-          if [ -f export_presets.cfg ]; then
-            sed -i '' 's/application\/app_store_team_id=""/application\/app_store_team_id="1234567890"/g' export_presets.cfg
-          fi
+          cat << 'EOF' > export_presets.cfg
+          [preset.0]
 
-      # تصدير المشروع إلى مجلد build/ios
-      - name: Export Godot to Xcode Project
+          name="iOS"
+          platform="iOS"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/ios/TowerWars.xcodeproj"
+
+          [preset.0.options]
+
+          architectural/arm64=true
+          application/app_store_team_id="1234567890"
+          application/bundle_identifier="com.towerwars.game"
+          application/signature="????"
+          application/short_version="1.0"
+          application/version="1.0"
+          capabilities/access_wifi=false
+          capabilities/push_notifications=false
+          user_data/custom_directory_name=""
+          EOF
+
+      # تصدير مشروع Xcode من Godot
+      - name: Export Godot Project to Xcode
         run: |
           mkdir -p build/ios
-          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj project.godot || true
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj project.godot
 
-      # البحث عن مشروع Xcode المُصَدَّر وبنائه تلقائياً
+      # بناء مشروع Xcode وتوليد تطبيق iOS بدون توقيع
       - name: Build Xcode Project (No CodeSign)
         run: |
           cd build/ios
-          XCODE_PROJ=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
-          if [ -z "$XCODE_PROJ" ]; then
-            echo "Error: No .xcodeproj found in build/ios"
-            ls -la
-            exit 1
-          fi
-          SCHEME_NAME=$(basename "$XCODE_PROJ" .xcodeproj)
-          xcodebuild -project "$XCODE_PROJ" -scheme "$SCHEME_NAME" -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
+          xcodebuild -project TowerWars.xcodeproj -scheme TowerWars -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
 
-      # تجميع وتجميع ملف الـ IPA
+      # حزم الملف في صيغة IPA
       - name: Package IPA
         run: |
-          cd build/ios
-          BUILD_DIR=$(find . -type d -name "Release-iphoneos" | head -n 1)
-          if [ -n "$BUILD_DIR" ]; then
-            cd "$BUILD_DIR"
-            mkdir -p Payload
-            mv *.app Payload/ 2>/dev/null || true
-            zip -r TowerWars_Godot.ipa Payload
-          else
-            echo "Release-iphoneos directory not found"
-            exit 1
-          fi
+          cd build/ios/build/Release-iphoneos
+          mkdir -p Payload
+          mv TowerWars.app Payload/ 2>/dev/null || mv *.app Payload/
+          zip -r TowerWars_Godot.ipa Payload
 
       # رفع الملف الناتج
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TowerWars-Godot-IPA
-          path: build/ios/**/TowerWars_Godot.ipa
+          path: build/ios/build/Release-iphoneos/TowerWars_Godot.ipa
           if-no-files-found: error
