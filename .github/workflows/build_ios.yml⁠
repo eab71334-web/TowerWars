@@ -1,0 +1,25 @@
+name: Build TowerWars iOS
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Godot Environment
+      run: |
+        echo "Preparing Godot environment for iOS build..."
+        # سيتم إضافة أوامر تحميل محرك Godot والتصدير التلقائي هنا
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TowerWars-iOS-Build
+        path: .
