@@ -40,7 +40,7 @@ class MainMenuScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // الشريط العلوي (العنوان + الحالة)
+              // الشريط العلوي
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: Row(
@@ -62,7 +62,7 @@ class MainMenuScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // الحاوية المركزية للقوائم والخيارات
+              // حاوية الأزرار الرئيسية
               Container(
                 width: 320,
                 padding: const EdgeInsets.all(16.0),
@@ -74,18 +74,16 @@ class MainMenuScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // زر ابدأ اللعب الآن الكبير
+                    // زر ابدأ اللعب
                     _buildMainButton(
                       title: 'ابدأ اللعب\nالآن!',
                       icon: Icons.play_arrow_rounded,
                       color: const Color(0xFF2196F3),
-                      onTap: () {
-                        // هنا يتم تشغيل مرحلة/محرك Godot
-                      },
+                      onTap: () {},
                     ),
                     const SizedBox(height: 12),
 
-                    // السطر الأول: تدريب منفرد + تحدي الأصدقاء
+                    // خيارات اللعب
                     Row(
                       children: [
                         Expanded(
@@ -107,7 +105,7 @@ class MainMenuScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // السطر الثاني: الإعدادات + المتجر
+                    // المتجر والإعدادات
                     Row(
                       children: [
                         Expanded(
@@ -142,7 +140,7 @@ class MainMenuScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // أسفل الشاشة: رقم الإصدار والمعرف
+              // أرقام الاصدار والمعرف
               const Padding(
                 padding: EdgeInsets.only(bottom: 12.0),
                 child: Text(
@@ -157,7 +155,6 @@ class MainMenuScreen extends StatelessWidget {
     );
   }
 
-  // ودجت الزر الرئيسي الكبير
   Widget _buildMainButton({
     required String title,
     required IconData icon,
@@ -206,7 +203,6 @@ class MainMenuScreen extends StatelessWidget {
     );
   }
 
-  // ودجت الأزرار الفرعية المزدوجة
   Widget _buildSecondaryButton({
     required String title,
     required IconData icon,
@@ -264,7 +260,6 @@ class MainMenuScreen extends StatelessWidget {
     );
   }
 
-  // ودجت الزر العريض (المتصدرون)
   Widget _buildFullWidthButton({
     required String title,
     required IconData icon,
