@@ -37,8 +37,8 @@ jobs:
           mkdir -p build
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/game.pck project.godot
 
-      # 3. استخراج المشغل المكتمل الخاص بـ Godot
-      - name: Prepare Godot Engine Executable
+      # 3. إعداد هيكل التطبيق وتجهيز مشغل Godot
+      - name: Prepare Godot Engine App Structure
         run: |
           mkdir -p build/Payload/TowerWars.app
           TEMPLATE_ZIP="$HOME/Library/Application Support/Godot/export_templates/4.3.stable/ios.zip"
@@ -55,8 +55,8 @@ jobs:
           
           cp build/game.pck build/Payload/TowerWars.app/
 
-      # 4. إضافة ملف Info.plist وتطبيق توقيع Ad-hoc
-      - name: Generate Plist and Apply Ad-hoc Signing
+      # 4. إضافة الإعدادات المتوافقة مع SideStore والتوقيع
+      - name: Add App Metadata and Ad-Hoc Sign
         run: |
           cat << 'EOF' > build/Payload/TowerWars.app/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
@@ -81,8 +81,6 @@ jobs:
               <array>
                   <string>arm64</string>
               </array>
-              <key>UILaunchStoryboardName</key>
-              <string>LaunchScreen</string>
               <key>UIRequiresFullScreen</key>
               <true/>
               <key>UISupportedInterfaceOrientations</key>
@@ -94,11 +92,10 @@ jobs:
           </plist>
           EOF
 
-          # تطبيق توقيع Ad-hoc محلي ليتعرف عليه iOS عند التثبيت
           codesign --force --deep --sign - build/Payload/TowerWars.app
 
-      # 5. ضغط ملف الـ IPA
-      - name: Package Final Signed IPA
+      # 5. ضغط ملف IPA
+      - name: Package Final IPA
         run: |
           cd build
           zip -r TowerWars_Godot.ipa Payload
