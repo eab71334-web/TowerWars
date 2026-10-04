@@ -13,26 +13,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Godot Engine
+      - name: Setup Godot Engine & Export Templates
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.2.2
           use-dotnet: false
-
-      - name: Download and Install Godot Export Templates
-        run: |
-          GODOT_VERSION="4.2.2.stable"
-          TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
-          mkdir -p "$TEMPLATES_DIR"
-          
-          echo "Downloading export templates..."
-          curl -L -o templates.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
-          
-          unzip -q templates.zip -d /tmp/templates
-          mv /tmp/templates/templates/* "$TEMPLATES_DIR/"
-          rm -rf templates.zip /tmp/templates
-          
-          echo "Templates successfully installed in: $TEMPLATES_DIR"
+          download-templates: true
 
       - name: Create export_presets.cfg if missing
         run: |
