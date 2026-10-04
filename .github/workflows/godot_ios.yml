@@ -19,16 +19,39 @@ jobs:
           version: 4.2.2
           use-dotnet: false
 
+      - name: Create export_presets.cfg if missing
+        run: |
+          if [ ! -f export_presets.cfg ]; then
+            cat << 'EOF' > export_presets.cfg
+          [preset.0]
+          name="iOS"
+          platform="iOS"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/ios/game.xcodeproj"
+          script_export_mode=1
+          
+          [preset.0.options]
+          architectures/arm64=true
+          EOF
+          fi
+
       - name: Export Godot iOS Project
         run: |
           mkdir -p build/ios
-          godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj || true
+          godot --headless --export-release "iOS" build/ios/game.xcodeproj
 
       - name: Build Xcode Project (No Codesign)
         run: |
           cd build/ios
-          xcodebuild -project TowerWars.xcodeproj \
-            -scheme TowerWars \
+          XCODE_PROJ=$(ls -d *.xcodeproj | head -n 1)
+          SCHEME_NAME=$(basename "$XCODE_PROJ" .xcodeproj)
+          xcodebuild -project "$XCODE_PROJ" \
+            -scheme "$SCHEME_NAME" \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO \
@@ -39,7 +62,7 @@ jobs:
         run: |
           cd build/ios
           mkdir -p Payload
-          cp -r build/Release-iphoneos/TowerWars.app Payload/
+          cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null || cp -r build/Build/Products/Release-iphoneos/*.app Payload/
           zip -r TowerWars_Godot_iOS.ipa Payload
 
       - name: Upload iOS IPA Artifact
