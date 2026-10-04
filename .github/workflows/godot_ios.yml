@@ -16,3 +16,12 @@ jobs:
       - name: Setup Environment
         run: |
           echo "Preparing to build TowerWars for iOS..."
+          # إنشاء مجلد وهمي لملف اللعبة للتجربة
+          mkdir -p build/ios
+          echo "TowerWars Game Data" > build/ios/game.txt
+
+      - name: Upload Game Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TowerWars-IPA-Build
+          path: build/ios/
