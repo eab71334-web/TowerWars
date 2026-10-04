@@ -3,6 +3,8 @@ name: Build Godot 4 iOS IPA
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -13,35 +15,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Godot Engine
-        uses: chickensoft-games/setup-godot@v2
-        with:
-          version: 4.2.2
-          use-dotnet: false
-
-      - name: Download & Install Export Templates via GitHub CLI
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Godot 4 & Export Templates
         run: |
-          GODOT_VERSION="4.2.2.stable"
-          TARGET_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
-          mkdir -p "$TARGET_DIR"
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
+          unzip -q Godot_v4.3-stable_macos.universal.zip
+          sudo mv Godot.app /Applications/Godot.app
+          
+          mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
+          unzip -q Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-          echo "Downloading Godot export templates via GitHub CLI..."
-          gh release download 4.2.2-stable \
-            --repo godotengine/godot \
-            --pattern "Godot_v4.2.2-stable_export_templates.tpz" \
-            --output templates.tpz
-
-          echo "Extracting templates..."
-          unzip -q templates.tpz -d /tmp/godot_templates_extracted
-          cp -r /tmp/godot_templates_extracted/templates/* "$TARGET_DIR/"
-          rm -rf templates.tpz /tmp/godot_templates_extracted
-
-      - name: Generate complete export_presets.cfg
+      # 1. إعداد ملف export_presets.cfg مع ضبط التصدير لمشروع Xcode
+      - name: Create export_presets.cfg
         run: |
           cat << 'EOF' > export_presets.cfg
           [preset.0]
+
           name="iOS"
           platform="iOS"
           runnable=true
@@ -50,54 +40,53 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="build/ios/game.xcodeproj"
-          script_export_mode=1
+          export_path="build/ios/TowerWars.xcodeproj"
 
           [preset.0.options]
-          architectures/arm64=true
+
+          architectural/arm64=true
+          application/app_store_team_id="1234567890"
           application/bundle_identifier="com.towerwars.game"
-          application/signature="com.towerwars.game"
+          application/signature="????"
           application/short_version="1.0"
           application/version="1.0"
-          application/team_id="XYZ1234567"
-          application/app_store_team_id="XYZ1234567"
-          capabilities/access_gyroscope=false
-          capabilities/access_accelerometer=false
-          capabilities/access_magnetometer=false
-          user_data/accessible_from_filesystem=false
-          user_data/accessible_via_itunes_sharing=false
-          privacy/camera_usage_description=""
-          privacy/microphone_usage_description=""
-          privacy/photolib_usage_description=""
+          capabilities/access_wifi=false
+          capabilities/push_notifications=false
+          user_data/custom_directory_name=""
           EOF
 
-      - name: Export Xcode Project from Godot
+      # 2. تصدير مشروع Xcode كاملاً من Godot
+      - name: Export Godot iOS Project
         run: |
           mkdir -p build/ios
-          godot --headless --export-release "iOS" build/ios/game.xcodeproj
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
 
-      - name: Build Xcode Project (No Codesign)
+      # 3. تجميع مشروع Xcode وتوليد تطبيق الآيفون (Release Build)
+      - name: Compile Xcode Project
         run: |
           cd build/ios
-          XCODE_PROJ=$(ls -d *.xcodeproj | head -n 1)
-          SCHEME_NAME=$(basename "$XCODE_PROJ" .xcodeproj)
-          xcodebuild -project "$XCODE_PROJ" \
-            -scheme "$SCHEME_NAME" \
-            -sdk iphoneos \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            build
+          xcodebuild -project TowerWars.xcodeproj \
+                     -scheme TowerWars \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     DSTROOT=../output \
+                     archive -archivePath ./TowerWars.xcarchive
 
-      - name: Package IPA Structure
+      # 4. استخراج ملف الـ .app وتجهيز حزمة Payload لملف IPA
+      - name: Create IPA Structure
         run: |
-          cd build/ios
-          mkdir -p Payload
-          cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null || cp -r build/Build/Products/Release-iphoneos/*.app Payload/
-          zip -r TowerWars_Godot_iOS.ipa Payload
+          mkdir -p build/Payload
+          cp -R build/ios/TowerWars.xcarchive/Products/Applications/TowerWars.app build/Payload/
+          cd build
+          zip -r TowerWars_Godot.ipa Payload
 
+      # 5. رفع ملف الـ IPA النهائي
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TowerWars-Godot-IPA
-          path: build/ios/TowerWars_Godot_iOS.ipa
+          path: build/TowerWars_Godot.ipa
+          if-no-files-found: error
