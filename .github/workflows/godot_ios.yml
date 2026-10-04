@@ -24,15 +24,24 @@ jobs:
           unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      - name: Export iOS Project
+      - name: Export Xcode Project from Godot
         run: |
           mkdir -p build/ios
-          # منح الصلاحيات للمجلد الحالي
           chmod -R 777 .
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
 
-      - name: Upload iOS Project Artifact
+      - name: Build Unsigned IPA via xcodebuild
+        run: |
+          cd build/ios
+          xcodebuild -project TowerWars.xcodeproj -scheme TowerWars -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO -configuration Release build
+          
+          # تجميع المخرجات في مجلد Payload وتحويله لـ IPA
+          mkdir -p Payload
+          cp -r build/Release-iphoneos/TowerWars.app Payload/
+          zip -r TowerWars_Unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TowerWars-iOS-Project
-          path: build/ios/
+          name: TowerWars-Unsigned-IPA
+          path: build/ios/TowerWars_Unsigned.ipa
