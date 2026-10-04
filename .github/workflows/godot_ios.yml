@@ -19,6 +19,21 @@ jobs:
           version: 4.2.2
           use-dotnet: false
 
+      - name: Download and Install Godot Export Templates
+        run: |
+          GODOT_VERSION="4.2.2.stable"
+          TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
+          mkdir -p "$TEMPLATES_DIR"
+          
+          echo "Downloading export templates..."
+          curl -L -o templates.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          
+          unzip -q templates.zip -d /tmp/templates
+          mv /tmp/templates/templates/* "$TEMPLATES_DIR/"
+          rm -rf templates.zip /tmp/templates
+          
+          echo "Templates successfully installed in: $TEMPLATES_DIR"
+
       - name: Create export_presets.cfg if missing
         run: |
           if [ ! -f export_presets.cfg ]; then
@@ -34,7 +49,7 @@ jobs:
           exclude_filter=""
           export_path="build/ios/game.xcodeproj"
           script_export_mode=1
-          
+
           [preset.0.options]
           architectures/arm64=true
           EOF
