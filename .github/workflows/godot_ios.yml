@@ -37,14 +37,13 @@ jobs:
           mkdir -p build
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/game.pck project.godot
 
-      # 3. فك واستخراج المشغل مع البحث عن الملف التنفيذي تلقائياً
+      # 3. استخراج المشغل المكتمل الخاص بـ Godot
       - name: Prepare Godot Engine Executable
         run: |
           mkdir -p build/Payload/TowerWars.app
           TEMPLATE_ZIP="$HOME/Library/Application Support/Godot/export_templates/4.3.stable/ios.zip"
           unzip -q "$TEMPLATE_ZIP" -d build/godot_template
           
-          # البحث عن الملف التنفيذي الخاص بـ Godot iOS ونسخه تلقائياً
           EXECUTABLE=$(find build/godot_template -type f \( -name "*release*" -o -name "*godot*" \) | head -n 1)
           if [ -n "$EXECUTABLE" ]; then
             cp "$EXECUTABLE" build/Payload/TowerWars.app/TowerWars
@@ -54,11 +53,10 @@ jobs:
             exit 1
           fi
           
-          # نسخ ملف game.pck داخل حزمة التطبيق
           cp build/game.pck build/Payload/TowerWars.app/
 
-      # 4. إنشاء ملفات التكوين لـ iOS
-      - name: Generate App Metadata
+      # 4. إضافة ملف Info.plist وتطبيق توقيع Ad-hoc
+      - name: Generate Plist and Apply Ad-hoc Signing
         run: |
           cat << 'EOF' > build/Payload/TowerWars.app/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
@@ -96,8 +94,11 @@ jobs:
           </plist>
           EOF
 
+          # تطبيق توقيع Ad-hoc محلي ليتعرف عليه iOS عند التثبيت
+          codesign --force --deep --sign - build/Payload/TowerWars.app
+
       # 5. ضغط ملف الـ IPA
-      - name: Package Final Godot IPA
+      - name: Package Final Signed IPA
         run: |
           cd build
           zip -r TowerWars_Godot.ipa Payload
