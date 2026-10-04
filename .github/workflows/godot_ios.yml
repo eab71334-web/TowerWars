@@ -12,29 +12,24 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. سحب الكود من المستودع
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. إعداد وتثبيت بيئة Flutter
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      # 3. تهيئة مشروع iOS وتحديد اسم حزمة صحيح بحروف صغيرة
       - name: Enable and Configure Flutter iOS
         run: |
           flutter config --enable-ios
           flutter create --platforms=ios . --project-name tower_wars --overwrite
           flutter pub get
 
-      # 4. بناء تطبيق iOS بدون توقيع (No CodeSign)
       - name: Build Unsigned iOS App
         run: |
           flutter build ios --release --no-codesign
 
-      # 5. تجميع المخرجات في مجلد Payload وضغطه إلى IPA
       - name: Package Unsigned IPA
         run: |
           cd build/ios/iphoneos
@@ -42,7 +37,6 @@ jobs:
           mv Runner.app Payload/
           zip -r TowerWars_Unsigned.ipa Payload
 
-      # 6. رفع ملف IPA كـ Artifact
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
