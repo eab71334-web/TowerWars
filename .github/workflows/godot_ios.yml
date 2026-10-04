@@ -19,21 +19,26 @@ jobs:
           version: 4.2.2
           use-dotnet: false
 
-      - name: Download & Install Export Templates
+      - name: Download & Install Export Templates via GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           GODOT_VERSION="4.2.2.stable"
           TARGET_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
           mkdir -p "$TARGET_DIR"
 
-          echo "Downloading Godot export templates..."
-          curl -sSL "https://downloads.tuxfamily.org/godotengine/4.2.2/Godot_v4.2.2-stable_export_templates.tpz" -o templates.zip
+          echo "Downloading Godot export templates via GitHub CLI..."
+          gh release download 4.2.2-stable \
+            --repo godotengine/godot \
+            --pattern "Godot_v4.2.2-stable_export_templates.tpz" \
+            --output templates.tpz
 
-          echo "Extracting templates to target directory..."
-          unzip -q templates.zip -d /tmp/godot_templates_extracted
+          echo "Extracting templates..."
+          unzip -q templates.tpz -d /tmp/godot_templates_extracted
           cp -r /tmp/godot_templates_extracted/templates/* "$TARGET_DIR/"
-          rm -rf templates.zip /tmp/godot_templates_extracted
+          rm -rf templates.tpz /tmp/godot_templates_extracted
 
-          echo "Checking extracted files:"
+          echo "Checking extracted templates:"
           ls -la "$TARGET_DIR"
 
       - name: Create export_presets.cfg if missing
