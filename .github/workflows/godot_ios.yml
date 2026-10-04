@@ -15,12 +15,10 @@ jobs:
 
       - name: Download Godot Engine
         run: |
-          # تحميل محرك غودوت لنظام ماك (الإصدار 4)
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
           unzip Godot_v4.3-stable_macos.universal.zip
           mv Godot.app /Applications/Godot.app
           
-          # تحميل قوالب التصدير الخاصة بغودوت
           mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
           unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
@@ -29,7 +27,8 @@ jobs:
       - name: Export iOS Project
         run: |
           mkdir -p build/ios
-          # أمر تصدير مشروع غودوت لنظام آي أو إس
+          # منح الصلاحيات للمجلد الحالي
+          chmod -R 777 .
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
 
       - name: Upload iOS Project Artifact
