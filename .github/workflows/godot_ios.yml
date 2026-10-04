@@ -26,7 +26,7 @@ jobs:
           unzip -q Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      # 1. إعداد ملف export_presets.cfg مع ضبط التصدير لمشروع Xcode
+      # 1. إعداد ملف إعدادات التصدير
       - name: Create export_presets.cfg
         run: |
           cat << 'EOF' > export_presets.cfg
@@ -40,7 +40,7 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="build/ios/TowerWars.xcodeproj"
+          export_path="build/game.pck"
 
           [preset.0.options]
 
@@ -55,35 +55,82 @@ jobs:
           user_data/custom_directory_name=""
           EOF
 
-      # 2. تصدير مشروع Xcode كاملاً من Godot
-      - name: Export Godot iOS Project
+      # 2. تصدير ملف حزمة اللعبة PCK
+      - name: Export Godot PCK
         run: |
-          mkdir -p build/ios
-          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
+          mkdir -p build
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/game.pck project.godot
 
-      # 3. تجميع مشروع Xcode وتوليد تطبيق الآيفون (Release Build)
-      - name: Compile Xcode Project
+      # 3. استخراج محرك iOS وتجميع حزمة IPA بالكامل
+      - name: Build Full IPA Package
         run: |
-          cd build/ios
-          xcodebuild -project TowerWars.xcodeproj \
-                     -scheme TowerWars \
-                     -configuration Release \
-                     -sdk iphoneos \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO \
-                     DSTROOT=../output \
-                     archive -archivePath ./TowerWars.xcarchive
+          mkdir -p build/Payload/TowerWars.app
+          
+          # استخراج قالب iOS الرسمي
+          TEMPLATE_ZIP="$HOME/Library/Application Support/Godot/export_templates/4.3.stable/ios.zip"
+          unzip -q "$TEMPLATE_ZIP" -d build/godot_template
+          
+          # استخراج ملف المحرك التنفيذي (Mach-O Binary)
+          cd build/godot_template
+          EXECUTABLE=$(find . -type f -exec file {} + | grep "Mach-O" | cut -d: -f1 | head -n 1)
+          cd ../..
+          
+          cp "build/godot_template/$EXECUTABLE" build/Payload/TowerWars.app/TowerWars
+          chmod +x build/Payload/TowerWars.app/TowerWars
+          
+          # نقل ملف بيانات اللعبة
+          cp build/game.pck build/Payload/TowerWars.app/
 
-      # 4. استخراج ملف الـ .app وتجهيز حزمة Payload لملف IPA
-      - name: Create IPA Structure
+          # إنشاء Info.plist متكامل للآيفون
+          cat << 'EOF' > build/Payload/TowerWars.app/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.plist">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key>
+              <string>en</string>
+              <key>CFBundleExecutable</key>
+              <string>TowerWars</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.towerwars.game</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundleName</key>
+              <string>TowerWars</string>
+              <key>CFBundleDisplayName</key>
+              <string>Tower Wars</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1.0</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>MinimumOSVersion</key>
+              <string>13.0</string>
+              <key>UIRequiredDeviceCapabilities</key>
+              <array>
+                  <string>arm64</string>
+              </array>
+              <key>UIRequiresFullScreen</key>
+              <true/>
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationLandscapeLeft</string>
+                  <string>UIInterfaceOrientationLandscapeRight</string>
+              </array>
+          </dict>
+          </plist>
+          EOF
+
+      # 4. ضغط الحزمة إلى ملف IPA
+      - name: Package Final IPA
         run: |
-          mkdir -p build/Payload
-          cp -R build/ios/TowerWars.xcarchive/Products/Applications/TowerWars.app build/Payload/
           cd build
           zip -r TowerWars_Godot.ipa Payload
 
-      # 5. رفع ملف الـ IPA النهائي
+      # 5. رفع ملف IPA الناتج
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
