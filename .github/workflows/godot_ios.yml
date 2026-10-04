@@ -26,16 +26,19 @@ jobs:
           unzip -q Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
+      # 1. إعداد ملف التصدير
       - name: Create export_presets.cfg
         run: |
           printf '[preset.0]\n\nname="iOS"\nplatform="iOS"\nrunnable=true\ndedicated_server=false\ncustom_features=""\nexport_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="build/game.pck"\n\n[preset.0.options]\n\narchitectural/arm64=true\napplication/app_store_team_id="1234567890"\napplication/bundle_identifier="com.towerwars.game"\napplication/signature="????"\napplication/short_version="1.0"\napplication/version="1.0"\ncapabilities/access_wifi=false\ncapabilities/push_notifications=false\nuser_data/custom_directory_name=""\n' > export_presets.cfg
 
+      # 2. تصدير ملف game.pck
       - name: Export Godot PCK
         run: |
           mkdir -p build
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/game.pck project.godot
 
-      - name: Prepare Structure and Info.plist
+      # 3. تجهيز التطبيق وإضافة ملفات التعريف المتوافقة مع ESign
+      - name: Prepare Structure and Info.plist for ESign
         run: |
           mkdir -p build/Payload/TowerWars.app
           TEMPLATE_ZIP="$HOME/Library/Application Support/Godot/export_templates/4.3.stable/ios.zip"
@@ -54,7 +57,7 @@ jobs:
 
           cat << 'EOF' > build/Payload/TowerWars.app/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.plist">
           <plist version="1.0">
           <dict>
               <key>CFBundleDevelopmentRegion</key>
@@ -71,13 +74,12 @@ jobs:
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
               <string>1.0</string>
-
               <key>CFBundleVersion</key>
               <string>1.0</string>
               <key>LSRequiresIPhoneOS</key>
               <true/>
               <key>MinimumOSVersion</key>
-              <string>12.0</string>
+              <string>13.0</string>
               <key>UIRequiredDeviceCapabilities</key>
               <array>
                   <string>arm64</string>
@@ -95,11 +97,13 @@ jobs:
 
           codesign --force --deep --sign - build/Payload/TowerWars.app
 
+      # 4. ضغط الحزمة
       - name: Package Final IPA
         run: |
           cd build
           zip -r TowerWars_Godot.ipa Payload
 
+      # 5. رفع الملف الناتج
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
