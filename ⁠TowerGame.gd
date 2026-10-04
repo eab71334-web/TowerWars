@@ -2,36 +2,25 @@ extends Node2D
 
 class_name TowerGame
 
-@export var block_speed: float = 300.0
-var current_block: RigidBody2D = null
-var tower_height: float = 0.0
-
-# قائمة بأشكال الكتل المتاحة للتخريب أو السقوط العشوائي
-var block_scenes = [
-	"res://blocks/square_block.tscn",
-	"res://blocks/long_block.tscn",
-	"res://blocks/triangle_block.tscn"
-]
+@export var block_speed: float = 350.0
+var current_score: int = 0
+var is_sabotaged: bool = false
 
 func _ready() -> void:
-	print("تم بدء لعبة TowerWars بنجاح!")
-	spawn_new_block()
+	print("تم بدء لعبة TowerWars بنجاح باستخدام Godot!")
+	spawn_block()
 
-# وظيفة توليد كتلة جديدة تسقط من الأعلى
-func spawn_new_block() -> void:
-	# محاكاة إنشاء كتلة جديدة في الأعلى لكي يترتب عليها بناء البرج
-	var random_choice = randi() % block_scenes.size()
-	print("تم توليد كتلة جديدة للبرج رقم: ", random_choice)
-	# هنا يتم إضافة الكود الخاص بإضافة الكتلة لبيئة اللعب
+# وظيفة إسقاط كتلة جديدة في البرج
+func spawn_block() -> void:
+	current_score += 1
+	print("تم إسقاط كتلة جديدة. ارتفاع البرج الحالي: ", current_score)
 
-# زر التخريب: إرسال رياح قوية أو هزة أرضية لزعزعة برج الخصم أونلاين
-func trigger_sabotage_wind(target_player_id: int) -> void:
-	print("تحذير! تم تفعيل زر التخريب وإرسال رياح قوية للاعب رقم: ", target_player_id)
-	# تطبيق قوة فيزيائية جانبية تؤثر على توازن كتل الخصم
-	apply_wind_force_to_tower()
-
-func apply_wind_force_to_tower() -> void:
-	# محاكاة تأثير الرياح على الـ RigidBody للكتل
-	var wind_force = Vector2(randf_range(-150.0, 150.0), -50.0)
-	if current_block:
-		current_block.apply_central_impulse(wind_force)
+# زر التخريب: إرسال رياح لزعزعة برج الخصم أونلاين
+func trigger_sabotage() -> void:
+	is_sabotaged = true
+	print("⚠ تم تفعيل زر التخريب وإرسال رياح قوية!")
+	
+	# إيقاف تأثير التخريب بعد ثانيتين
+	await get_tree().create_timer(2.0).timeout
+	is_sabotaged = false
+	print("✔ انتهى تأثير الرياح، عاد البرج لحالته الطبيعية.")
