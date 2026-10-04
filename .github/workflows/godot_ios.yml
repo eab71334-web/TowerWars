@@ -26,48 +26,30 @@ jobs:
           unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      # إنشاء ملف إعدادات التصدير بصيغة صحيحة ودقيقة
+      # إنشاء ملف إعدادات التصدير بصيغة Xcode Project
       - name: Create export_presets.cfg
         run: |
-          printf '[preset.0]\n\nname="iOS"\nplatform="iOS"\nrunnable=true\ndedicated_server=false\ncustom_features=""\nexport_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="build/ios/game.pck"\n\n[preset.0.options]\n\narchitectural/arm64=true\napplication/app_store_team_id="1234567890"\napplication/bundle_identifier="com.towerwars.game"\napplication/signature="????"\napplication/short_version="1.0"\napplication/version="1.0"\ncapabilities/access_wifi=false\ncapabilities/push_notifications=false\nuser_data/custom_directory_name=""\n' > export_presets.cfg
+          printf '[preset.0]\n\nname="iOS"\nplatform="iOS"\nrunnable=true\ndedicated_server=false\ncustom_features=""\nexport_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="build/ios/TowerWars.xcodeproj"\n\n[preset.0.options]\n\narchitectural/arm64=true\napplication/app_store_team_id="1234567890"\napplication/bundle_identifier="com.towerwars.game"\napplication/signature="????"\napplication/short_version="1.0"\napplication/version="1.0"\ncapabilities/access_wifi=false\ncapabilities/push_notifications=false\nuser_data/custom_directory_name=""\n' > export_presets.cfg
 
-      # تصدير حزمة ملفات اللعبة PCK لتجنب أخطاء الإعدادات
-      - name: Export Godot Game Pack
+      # تصدير مشروع Xcode الكامل من Godot
+      - name: Export Godot Project to Xcode
         run: |
           mkdir -p build/ios
-          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-pack "iOS" build/ios/game.pck project.godot
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj project.godot || true
 
-      # حزم اللعبة داخل تطبيق iOS مستقل وتجميع الـ IPA
-      - name: Package Unsigned iOS IPA
+      # بناء الملف الثنائي المشفر لـ iOS عبر Xcode
+      - name: Build Xcode App (No CodeSign)
         run: |
           cd build/ios
-          mkdir -p Payload/TowerWars.app
-          mv game.pck Payload/TowerWars.app/
-          
-          # إنشاء ملف Info.plist أساسي للتطبيق
-          cat << 'EOF' > Payload/TowerWars.app/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleExecutable</key>
-              <string>TowerWars</string>
-              <key>CFBundleIdentifier</key>
-              <string>com.towerwars.game</string>
-              <key>CFBundleName</key>
-              <string>Tower Wars</string>
-              <key>CFBundlePackageType</key>
-              <string>APPL</string>
-              <key>CFBundleShortVersionString</key>
-              <string>1.0</string>
-              <key>CFBundleVersion</key>
-              <string>1</string>
-              <key>LSRequiresIPhoneOS</key>
-              <true/>
-          </dict>
-          </plist>
-          EOF
+          xcodebuild -project TowerWars.xcodeproj -scheme TowerWars -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO clean build
 
+      # تجميع الملفات داخل حزمة Payload وتوليد الـ IPA
+      - name: Package Complete IPA
+        run: |
+          cd build/ios
+          APP_PATH=$(find . -type d -name "*.app" | head -n 1)
+          mkdir -p Payload
+          cp -r "$APP_PATH" Payload/
           zip -r TowerWars_Godot.ipa Payload
 
       # رفع ملف الـ IPA النهائي
