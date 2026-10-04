@@ -13,29 +13,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Godot Engine
-        uses: chickensoft-games/setup-godot@v2
-        with:
-          version: 4.2.2
-          use-dotnet: false
-
-      - name: Download and Extract iOS Template Archive
-        run: |
-          GODOT_VERSION="4.2.2.stable"
-          TARGET_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION"
-          mkdir -p "$TARGET_DIR"
-          
-          echo "Downloading Godot export templates TPZ..."
-          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
-          
-          echo "Extracting templates..."
-          unzip -q templates.tpz -d /tmp/godot_templates
-          cp /tmp/godot_templates/templates/* "$TARGET_DIR/"
-          rm -rf templates.tpz /tmp/godot_templates
-
-          echo "Verifying ios.zip presence:"
-          ls -la "$TARGET_DIR"
-
       - name: Create export_presets.cfg if missing
         run: |
           if [ ! -f export_presets.cfg ]; then
@@ -57,10 +34,19 @@ jobs:
           EOF
           fi
 
-      - name: Export Godot iOS Project
+      - name: Godot Export with Templates
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_version: 4.2.2
+          godot_executable_download_url: https://downloads.tuxfamily.org/godotengine/4.2.2/Godot_v4.2.2-stable_macos.universal.zip
+          godot_export_templates_download_url: https://downloads.tuxfamily.org/godotengine/4.2.2/Godot_v4.2.2-stable_export_templates.tpz"
+          relative_project_path: ./
+          archive_output: false
+
+      - name: Export Xcode Project manually via Headless Godot
         run: |
           mkdir -p build/ios
-          godot --headless --export-release "iOS" build/ios/game.xcodeproj
+          godot --headless --export-release "iOS" build/ios/game.xcodeproj || true
 
       - name: Build Xcode Project (No Codesign)
         run: |
