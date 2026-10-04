@@ -1,24 +1,57 @@
-[preset.0]
+name: Build TowerWars iOS IPA
 
-name="iOS"
-platform="iOS"
-runnable=true
-dedicated_server=false
-custom_features=""
-export_filter="all_resources"
-include_filter=""
-exclude_filter=""
-export_path="build/ios/TowerWars.xcodeproj"
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-[preset.0.options]
-application/bundle_identifier="com.towerwars.game"
-application/short_version="1.0.0"
-application/version="1.0.0"
-application/copyright="TowerWars"
-application/app_store_team_id="1234567890"
-codesign/identity="Apple Development"
-codesign/signing_certificate=""
-codesign/provisioning_profile=""
-codesign/entitlements=""
-codesign/debugging_entitlements=true
-architectures=Array[String](["arm64"])
+jobs:
+  build-ios-ipa:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 1. إعداد بيئة Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # 2. تنزيل Godot 4.3 وتجهيز مكتبات/أصول اللعبة
+      - name: Download Godot Engine & Export Templates
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
+          unzip Godot_v4.3-stable_macos.universal.zip
+          mv Godot.app /Applications/Godot.app
+          
+          mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
+          unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+
+      # 3. إعداد تطبيق Flutter لنظام iOS
+      - name: Enable and Configure Flutter iOS
+        run: |
+          flutter config --enable-ios
+          flutter pub get
+
+      # 4. بناء الـ Payload بدون الحاجة لتوقيع (No CodeSign)
+      - name: Build iOS Payload via Flutter
+        run: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          mv Runner.app Payload/
+          zip -r TowerWars_Unsigned.ipa Payload
+
+      # 5. رفع ملف IPA الناتجة كـ Artifact
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ios/iphoneos/TowerWars_Unsigned.ipa
+          if-no-files-found: error
