@@ -26,7 +26,7 @@ jobs:
       - name: Enable and Configure Flutter iOS
         run: |
           flutter config --enable-ios
-          flutter create --platforms=ios . --force
+          flutter create --platforms=ios . --overwrite
           flutter pub get
 
       # 4. بناء تطبيق iOS وتوليد حزمة Runner.app بدون توقيع (No CodeSign)
