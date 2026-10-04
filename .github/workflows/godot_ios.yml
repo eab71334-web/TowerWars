@@ -38,13 +38,9 @@ jobs:
           cp -r /tmp/godot_templates_extracted/templates/* "$TARGET_DIR/"
           rm -rf templates.tpz /tmp/godot_templates_extracted
 
-          echo "Checking extracted templates:"
-          ls -la "$TARGET_DIR"
-
-      - name: Create export_presets.cfg if missing
+      - name: Generate complete export_presets.cfg
         run: |
-          if [ ! -f export_presets.cfg ]; then
-            cat << 'EOF' > export_presets.cfg
+          cat << 'EOF' > export_presets.cfg
           [preset.0]
           name="iOS"
           platform="iOS"
@@ -59,8 +55,20 @@ jobs:
 
           [preset.0.options]
           architectures/arm64=true
+          application/identifier="com.towerwars.game"
+          application/name="TowerWars"
+          application/signature=""
+          application/short_version="1.0"
+          application/version="1.0"
+          capabilities/access_gyroscope=false
+          capabilities/access_accelerometer=false
+          capabilities/access_magnetometer=false
+          user_data/accessible_from_filesystem=false
+          user_data/accessible_via_itunes_sharing=false
+          privacy/camera_usage_description=""
+          privacy/microphone_usage_description=""
+          privacy/photolib_usage_description=""
           EOF
-          fi
 
       - name: Export Xcode Project from Godot
         run: |
