@@ -1,67 +1,24 @@
-name: Build Godot & Flutter iOS IPA
+[preset.0]
 
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+name="iOS"
+platform="iOS"
+runnable=true
+dedicated_server=false
+custom_features=""
+export_filter="all_resources"
+include_filter=""
+exclude_filter=""
+export_path="build/ios/TowerWars.xcodeproj"
 
-jobs:
-  build-ios:
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      # 1. إعداد بيئة Flutter
-      - name: Set up Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          architecture: x64
-
-      # 2. تنزيل وتثبيت Godot 4.3 وقوالب التصدير
-      - name: Download Godot Engine & Export Templates
-        run: |
-          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
-          unzip Godot_v4.3-stable_macos.universal.zip
-          mv Godot.app /Applications/Godot.app
-          
-          mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
-          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
-          unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
-          mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
-
-      # 3. تصدير مشروع Xcode من Godot
-      - name: Export Xcode Project from Godot
-        run: |
-          mkdir -p build/ios
-          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
-
-      # 4. بناء حزمة Flutter / Xcode بدون توقيع (CODE_SIGNING_ALLOWED=NO)
-      - name: Build Unsigned iOS App
-        run: |
-          cd build/ios
-          xcodebuild -project TowerWars.xcodeproj \
-            -scheme TowerWars \
-            -sdk iphoneos \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            build
-
-      # 5. ضغط المخرجات إلى ملف IPA غير موقع (جاهز للـ TIPA / TrollStore / AltStore)
-      - name: Package Unsigned IPA
-        run: |
-          cd build/ios
-          mkdir -p Payload
-          cp -r build/Release-iphoneos/TowerWars.app Payload/
-          zip -r TowerWars_Unsigned.ipa Payload
-
-      # 6. رفع الملف كـ Artifact لتنزيله مباشرة من GitHub
-      - name: Upload IPA Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: TowerWars-iOS-Unsigned-IPA
-          path: build/ios/TowerWars_Unsigned.ipa
+[preset.0.options]
+application/bundle_identifier="com.towerwars.game"
+application/short_version="1.0.0"
+application/version="1.0.0"
+application/copyright="TowerWars"
+application/app_store_team_id="1234567890"
+codesign/identity="Apple Development"
+codesign/signing_certificate=""
+codesign/provisioning_profile=""
+codesign/entitlements=""
+codesign/debugging_entitlements=true
+architectures=Array[String](["arm64"])
