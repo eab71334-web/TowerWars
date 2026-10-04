@@ -12,11 +12,9 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. سحب كود المشروع من GitHub
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. تثبيت Godot 4 وقوالب التصدير (Export Templates)
       - name: Install Godot 4 & Export Templates
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
@@ -28,30 +26,51 @@ jobs:
           unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
           mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      # 3. تصدير مشروع Godot إلى مشروع Xcode
+      # إسناد Team ID وهمي لتجاوز فحص Godot
+      - name: Patch export_presets.cfg with Dummy Team ID
+        run: |
+          if [ -f export_presets.cfg ]; then
+            sed -i '' 's/application\/app_store_team_id=""/application\/app_store_team_id="1234567890"/g' export_presets.cfg
+          fi
+
+      # تصدير المشروع إلى مجلد build/ios
       - name: Export Godot to Xcode Project
         run: |
           mkdir -p build/ios
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj project.godot || true
 
-      # 4. بناء مشروع Xcode وتوليد ملف Runner.app بدون توقيع
+      # البحث عن مشروع Xcode المُصَدَّر وبنائه تلقائياً
       - name: Build Xcode Project (No CodeSign)
         run: |
           cd build/ios
-          xcodebuild -project TowerWars.xcodeproj -scheme TowerWars -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
+          XCODE_PROJ=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
+          if [ -z "$XCODE_PROJ" ]; then
+            echo "Error: No .xcodeproj found in build/ios"
+            ls -la
+            exit 1
+          fi
+          SCHEME_NAME=$(basename "$XCODE_PROJ" .xcodeproj)
+          xcodebuild -project "$XCODE_PROJ" -scheme "$SCHEME_NAME" -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
 
-      # 5. ضغط المخرجات في مجلد Payload لتكوين ملف .ipa
+      # تجميع وتجميع ملف الـ IPA
       - name: Package IPA
         run: |
-          cd build/ios/build/Release-iphoneos
-          mkdir -p Payload
-          mv *.app Payload/ 2>/dev/null || mv *.pck Payload/ 2>/dev/null || true
-          zip -r TowerWars_Godot.ipa Payload
+          cd build/ios
+          BUILD_DIR=$(find . -type d -name "Release-iphoneos" | head -n 1)
+          if [ -n "$BUILD_DIR" ]; then
+            cd "$BUILD_DIR"
+            mkdir -p Payload
+            mv *.app Payload/ 2>/dev/null || true
+            zip -r TowerWars_Godot.ipa Payload
+          else
+            echo "Release-iphoneos directory not found"
+            exit 1
+          fi
 
-      # 6. رفع ملف الـ IPA كـ Artifact
+      # رفع الملف الناتج
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TowerWars-Godot-IPA
-          path: build/ios/build/Release-iphoneos/TowerWars_Godot.ipa
-          if-no-files-found: ignore
+          path: build/ios/**/TowerWars_Godot.ipa
+          if-no-files-found: error
