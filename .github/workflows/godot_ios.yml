@@ -13,15 +13,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Download Godot Engine
         run: |
-          echo "Preparing to build TowerWars for iOS..."
-          # إنشاء مجلد وهمي لملف اللعبة للتجربة
-          mkdir -p build/ios
-          echo "TowerWars Game Data" > build/ios/game.txt
+          # تحميل محرك غودوت لنظام ماك (الإصدار 4)
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip
+          unzip Godot_v4.3-stable_macos.universal.zip
+          mv Godot.app /Applications/Godot.app
+          
+          # تحميل قوالب التصدير الخاصة بغودوت
+          mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
+          unzip Godot_v4.3-stable_export_templates.tpz -d ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
+          mv ~/Library/Application\ Support/Godot/export_templates/4.3.stable/templates/* ~/Library/Application\ Support/Godot/export_templates/4.3.stable/
 
-      - name: Upload Game Artifact
+      - name: Export iOS Project
+        run: |
+          mkdir -p build/ios
+          # أمر تصدير مشروع غودوت لنظام آي أو إس
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/TowerWars.xcodeproj
+
+      - name: Upload iOS Project Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TowerWars-IPA-Build
+          name: TowerWars-iOS-Project
           path: build/ios/
